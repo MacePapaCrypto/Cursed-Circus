@@ -114,7 +114,9 @@ contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
 
   function _getDiscount(address collection) internal returns(uint percentDiscount) {
     //First check if they have 50% discount from LGE
-    if(LGEContract.terms(msg.sender) > 0) {
+    //only need to return 1 of the two values. Both will be 0 if not participated
+    (uint share,) = LGEContract.terms(msg.sender);
+    if(share > 0) {
       percentDiscount = 50;
     }
     else {
