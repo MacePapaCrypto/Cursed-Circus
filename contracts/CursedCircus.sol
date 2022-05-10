@@ -11,6 +11,7 @@ import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
 import "./IWrappedFantom.sol";
 import "./IElasticLGE.sol";
 
+
 /* Custom Error Section - Use with ethers.js for custom errors */
 // Public Mint is Paused
 error MintPaused();
@@ -20,9 +21,6 @@ error AmountLessThanOne();
 
 // Cannot mint more than maxMintAmount
 error AmountOverMax(uint256 amtMint, uint256 maxMint);
-
-// Cannot mint more than wallet max
-error AmountOverWalletMax(uint256 amtLeft, uint256 maxPerWallet);
 
 // Token not in Auth List
 error TokenNotAuthorized();
@@ -52,14 +50,12 @@ contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
   ];
 
   mapping(address => uint) public collectionsWithDiscount;
-  mapping(address => uint) public nftsPerWallet;
 
   //@audit cost too low?
   mapping(address => uint) public acceptedCurrencies;
 
   uint256 public immutable maxSupply; //2000
   uint256 public immutable maxMintAmount; //5
-  uint256 public immutable maxNFTsPerWallet; //10
 
   bool public publicPaused = true;
   uint16[2000] private ids;
@@ -73,12 +69,10 @@ contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
     address _royaltyAddress,
     uint _royaltiesPercentage,
     uint _maxSupply,
-    uint _maxMintAmount,
-    uint _maxNFTsPerWallet
+    uint _maxMintAmount
   ) ERC721(_name, _symbol) {
         maxSupply = _maxSupply;
         maxMintAmount = _maxMintAmount;
-        maxNFTsPerWallet = _maxNFTsPerWallet;
         lpPair = _lpPair; 
         _setReceiver(_royaltyAddress);
         setBaseURI(_initBaseURI);
@@ -115,12 +109,12 @@ contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
   function _getDiscount(address collection) internal returns(uint percentDiscount) {
     //First check if they have 50% discount from LGE
     //only need to return 1 of the two values. Both will be 0 if not participated
-    (uint share,) = LGEContract.terms(msg.sender);
-    if(share > 0) {
-      percentDiscount = 50;
+    Terms memory termReturn = LGEContract.terms(msg.sender);
+    if(termReturn.term > 0) {
+      percentDiscount = 100 - _curve(termReturn.term);
     }
     else {
-      if(msg.sender.balanceOf(collection) > 0) {
+      if(ERC721(collection).balanceOf(msg.sender) > 0) {
         //Discount is 33%, so need to return 66
         percentDiscount = collectionsWithDiscount[collection];
       }
@@ -130,6 +124,11 @@ contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
     }
     return percentDiscount;
   }
+
+  function _curve(uint term) internal returns (uint) {
+    uint discount = sqrt(term) / 400;
+    return Math.min(50, discount);
+  } 
 
   function mint(address token, uint amount, address collection) external payable {
     //mint is closed
@@ -144,11 +143,6 @@ contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
         maxMint: maxMintAmount
       });
     }
-    if(nftsPerWallet[msg.sender] + amount > maxNFTsPerWallet)
-      revert AmountOverWalletMax({
-        amtLeft: 10 - nftsPerWallet[msg.sender],
-        maxPerWallet: 10
-      });
     if(acceptedCurrencies[token] <= 0)
       revert TokenNotAuthorized();
     //require(acceptedCurrencies[token] > 0, "token not authorized");
@@ -183,7 +177,6 @@ contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
 
   function _mintInternal(uint _amount) internal {
       for (uint256 i = 1; i <= _amount; ++i) {
-          nftsPerWallet[msg.sender] += 1;
           _safeMint(msg.sender, _pickRandomUniqueId(_getRandom()) +1);
       }
   }
