@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
 import "./IWrappedFantom.sol";
+import "./IElasticLGE.sol";
 
 /* Custom Error Section - Use with ethers.js for custom errors */
 // Public Mint is Paused
@@ -19,6 +20,9 @@ error AmountLessThanOne();
 
 // Cannot mint more than maxMintAmount
 error AmountOverMax(uint256 amtMint, uint256 maxMint);
+
+// Cannot mint more than wallet max
+error AmountOverWalletMax(uint256 amtLeft, uint256 maxPerWallet);
 
 // Token not in Auth List
 error TokenNotAuthorized();
@@ -35,6 +39,7 @@ contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
   string baseURI;
   string public baseExtension = ".json";
 
+  IElasticLGE LGEContract = IElasticLGE(0x96662f375a9734654cB57BbFeb31Db9dD7784A7F);
   address public lpPair; // = 0x2b4C76d0dc16BE1C31D4C1DC53bF9B45987Fc75c; - usdcftm pair
   IWrappedFantom wftm = IWrappedFantom(0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83);
   //Team wallets
@@ -47,12 +52,14 @@ contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
   ];
 
   mapping(address => uint) public collectionsWithDiscount;
+  mapping(address => uint) public nftsPerWallet;
 
   //@audit cost too low?
   mapping(address => uint) public acceptedCurrencies;
 
   uint256 public immutable maxSupply; //2000
   uint256 public immutable maxMintAmount; //5
+  uint256 public immutable maxNFTsPerWallet; //10
 
   bool public publicPaused = true;
   uint16[2000] private ids;
@@ -66,10 +73,12 @@ contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
     address _royaltyAddress,
     uint _royaltiesPercentage,
     uint _maxSupply,
-    uint _maxMintAmount
+    uint _maxMintAmount,
+    uint _maxNFTsPerWallet
   ) ERC721(_name, _symbol) {
         maxSupply = _maxSupply;
         maxMintAmount = _maxMintAmount;
+        maxNFTsPerWallet = _maxNFTsPerWallet;
         lpPair = _lpPair; 
         _setReceiver(_royaltyAddress);
         setBaseURI(_initBaseURI);
@@ -104,8 +113,19 @@ contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
   }
 
   function _getDiscount(address collection) internal returns(uint percentDiscount) {
-    require(msg.sender.balanceOf(collection) > 0, "Does not own the discount NFT");
-    percentDiscount = collectionsWithDiscount[collection];
+    //First check if they have 50% discount from LGE
+    if(LGEContract.terms(msg.sender) > 0) {
+      percentDiscount = 50;
+    }
+    else {
+      if(msg.sender.balanceOf(collection) > 0) {
+        //Discount is 33%, so need to return 66
+        percentDiscount = collectionsWithDiscount[collection];
+      }
+      else {
+        percentDiscount = 100;
+      }
+    }
     return percentDiscount;
   }
 
@@ -122,7 +142,11 @@ contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
         maxMint: maxMintAmount
       });
     }
-    //require(amount <= maxMintAmount, 'Amount to mint larger than max allowed');
+    if(nftsPerWallet[msg.sender] + amount > maxNFTsPerWallet)
+      revert AmountOverWalletMax({
+        amtLeft: 10 - nftsPerWallet[msg.sender],
+        maxPerWallet: 10
+      });
     if(acceptedCurrencies[token] <= 0)
       revert TokenNotAuthorized();
     //require(acceptedCurrencies[token] > 0, "token not authorized");
@@ -137,6 +161,7 @@ contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
 
     //All check have passed, we can mint after applying a discount to the cost
     uint discountPercentage = _getDiscount(collection);
+    //If no discount, then returned discount percentage is zero. We need to return 100 in order to have the math cancel out to cost * 1
 
     uint amountFromSender = msg.value;
     if (token == address(0)) {
@@ -154,23 +179,24 @@ contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
     }
   }
 
-    function _mintInternal(uint _amount) internal {
-        for (uint256 i = 1; i <= _amount; ++i) {
-            _safeMint(msg.sender, _pickRandomUniqueId(_getRandom()) +1);
-        }
-    }
+  function _mintInternal(uint _amount) internal {
+      for (uint256 i = 1; i <= _amount; ++i) {
+          nftsPerWallet[msg.sender] += 1;
+          _safeMint(msg.sender, _pickRandomUniqueId(_getRandom()) +1);
+      }
+  }
 
-    function _getRandom() internal returns (uint) {
-       (uint token0, uint token1) = _getRandomNumbers();
-        return uint(keccak256(abi.encodePacked(
-            token0, token1
-        )));
-    }
+  function _getRandom() internal returns (uint) {
+      (uint token0, uint token1) = _getRandomNumbers();
+      return uint(keccak256(abi.encodePacked(
+          token0, token1
+      )));
+  }
 
-    function _getRandomNumbers() internal returns (uint, uint) {
-        (uint token0, uint token1,) = IUniswapV2Pair(lpPair).getReserves();
-        return (token0, token1);
-    }
+  function _getRandomNumbers() internal returns (uint, uint) {
+      (uint token0, uint token1,) = IUniswapV2Pair(lpPair).getReserves();
+      return (token0, token1);
+  }
 
   function walletOfOwner(address _owner)
     public
