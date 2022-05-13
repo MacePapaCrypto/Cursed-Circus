@@ -143,7 +143,7 @@ contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
   }
 
   function _curve(uint term) internal returns (uint) {
-    uint discount = Math.sqrt(term) / 400;
+    uint discount = (35 + (Math.sqrt(term) / 800));
     if(discount < 35) {
       discount = 35;
     }
