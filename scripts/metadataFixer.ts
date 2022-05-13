@@ -1,6 +1,7 @@
 import fs from 'fs';
 import { StringUtils } from 'turbocommons-ts';
 import { parse } from 'csv-parse';
+import * as path from "path";
 //import * as IPFS from 'ipfs-core';
 import * as IPFS from 'ipfs-http-client';
 const basePath = process.cwd();
@@ -47,11 +48,6 @@ async function getNftImageUri() {
     return imageURI;
 }
 
-interface MetadataOutput {
-    nameArray: string,
-    descriptionArray: string
-}
-
 type ClownBio = {
     Name: string;
     Bio: string;
@@ -60,12 +56,23 @@ type ClownBio = {
     CauseOfDeath: string;
 }
 
-function grabNameandDescription(index: number): MetadataOutput {
+type MetadataStructure = {
+    name: string;
+    bio: string;
+    age: string;
+    networth: string;
+    causeofdeath: string;
+    description: string;
+}
+
+function grabNameandDescription(index: number): MetadataStructure {
     let clownName: string = "";
     let rawdata: any;
-    const textPath: string = "/extras/clownBios.csv";
+    //let textPath: string = path.resolve(__dirname, "./extras/clownBios.csv");
+    let textPath: string = "./extras/clownBios.csv";
+    console.log(textPath);
     const headers = ['Name', 'Bio', 'Age', 'Net Worth', 'Cause of Death'];
-    let realIndex: number = index - 1;
+    let realIndex: number = index;
     let clownNameArray: string = "";
     let clownDescriptionArray: string = "";
     rawdata = fs.readFileSync(textPath, 'utf8');
@@ -79,8 +86,12 @@ function grabNameandDescription(index: number): MetadataOutput {
         console.log(result[index]);
     })
     return {
-        nameArray: clownNameArray,
-        descriptionArray: clownDescriptionArray
+        name: clownNameArray,
+        bio: "",
+        age: "",
+        networth: "",
+        causeofdeath: "",
+        description: clownDescriptionArray
     };
 }
 
@@ -89,36 +100,38 @@ async function updateNftJson() {
 
     let rawdata: any;
     let data: any;
-    const baseJsonPath: string = "jsonOutput/";
+    const baseJsonPath: string = "./jsonOutput/";
     let jsonInPath: string = "";
     let jsonOutPath: string = "";
     let clownName: string = "";
     let pussySubClan: string = "";
     let pussyClan: string = "";
 
-    for(let i = 1; i < 2000; i ++) {
+    for(let i = 1; i < 2; i ++) {
         //console.log("Loop: " + i);
         jsonInPath = baseJsonPath + i + '.json';
+        //jsonInPath = path.resolve(__dirname, baseJsonPath + i + '.json');
         console.log(jsonInPath);
         rawdata = fs.readFileSync(jsonInPath);
         data = JSON.parse(rawdata);
         try {
             data.attributes.forEach((item: any) => {
-                if(item.trait_type == "clan") {
-                    pussyClan = item.value;
-                }
-                if(item.trait_type == "body") {
-                    pussySubClan = item.value;
-                }
+                let tempString = item.value;
+                let tempStringSplit = tempString.split(/(?=[A-Z])/);
+                item.value = tempStringSplit[1];
             });
         } catch(error) {
             console.log(error);
         }
         try {
-            let metadataUpdate: MetadataOutput = grabNameandDescription(i);
-            metadataUpdate.nameArray = StringUtils.formatCase(grabName(i), StringUtils.FORMAT_START_CASE);
+            let metadataUpdate: MetadataStructure = grabNameandDescription(i);
+            clownName = metadataUpdate.name; //= StringUtils.formatCase(grabName(i), StringUtils.FORMAT_START_CASE);
             clownName = clownName.replace(/(\r\n|\n|\r)/gm, "");
             data.name = clownName;
+            data.bio = metadataUpdate.bio;
+            data.age = metadataUpdate.age;
+            data.networth = metadataUpdate.networth;
+            data.causeofdeath = metadataUpdate.causeofdeath
             data.description = ``;
             //data.image = "https://gateway.pinata.cloud/ipfs/QmV4dQTYM5B6aaNyKkJ2r7WyQRTh3gFT72V38m8akhykq3/" + i + ".png";
             data.edition = i;

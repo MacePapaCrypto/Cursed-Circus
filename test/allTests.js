@@ -1,6 +1,8 @@
 const { isCallTrace } = require("hardhat/internal/hardhat-network/stack-traces/message-trace");
 const hre = require('hardhat');
 const chai = require('chai');
+const { waffle } = require("hardhat");
+
 const {solidity} = require('ethereum-waffle');
 chai.use(solidity);
 const {expect} = chai;
@@ -13,8 +15,8 @@ describe("Deploy and Premint", function () {
     ];
 
     const prices = [
-        ethers.utils.parseUnits('0.0001', 'ether'), //WFTM
-        ethers.utils.parseUnits('0.0001', 'ether')  //USDC
+        hre.ethers.utils.parseUnits('0.0001', 'ether'), //WFTM
+        hre.ethers.utils.parseUnits('0.0001', 'ether')  //USDC
     ];
 
     const collections = [
@@ -61,26 +63,29 @@ describe("Deploy and Premint", function () {
           self = await ethers.provider.getSigner("0xF1a26c9f2978aB1CA4659d3FbD115845371ED0F5");
           selfAddress = await self.getAddress();
           ownerAddress = await owner.getAddress();
-    });
-    it("Contract should deploy", async function () {
-        const CCContract = hre.ethers.getContractFactory("CursedCircusTest");
-        const connected = CCContract.deploy(
-            "CCTEST",
-            "",
-            "0x2b4C76d0dc16BE1C31D4C1DC53bF9B45987Fc75c",
-            "0x1740Eae421b6540fda3924bE59F549c00AB67575",
-            5,
-            130,
-            5,
-            {gasLimit: 8000000, gasPrice: ethers.utils.parseUnits('3000', 'gwei')}
-        );
-        await connected.deployed();
-        testContractAddress = connected.address;
-        console.log("Deployed to: ", connected.address);
+
+
+          const CCContract = await hre.ethers.getContractFactory("CursedCircusTest");
+          const connected = await CCContract.deploy(
+              "CCTEST",
+              "",
+              "initbasuri",
+              "0x2b4C76d0dc16BE1C31D4C1DC53bF9B45987Fc75c",
+              "0x1740Eae421b6540fda3924bE59F549c00AB67575",
+              5,
+              2000,
+              5,
+              {gasLimit: 8000000, gasPrice: ethers.utils.parseUnits('3000', 'gwei')}
+          );
+          await connected.deployed();
+          testContractAddress = connected.address;
+          console.log("Deployed to: ", connected.address);
+
+
     });
     it("Premint should be completed", async function () {
-        const CCContract = hre.ethers.getContractFactory("CursedCircusTest");
-        const connected = CCContract.attach(testContractAddress);
+        const CCContract = await hre.ethers.getContractFactory("CursedCircusTest");
+        const connected = await CCContract.attach(testContractAddress);
         let tx = await connected.premintTokens({gasLimit: 8000000, gasPrice: ethers.utils.parseUnits('3000', 'gwei')});
         await tx.wait();
         let totalSupply = await connected.totalSupply();
@@ -92,11 +97,8 @@ describe("Deploy and Premint", function () {
         totalSupply = await connected.totalSupply();
         expect(totalSupply).to.be.equal(120);
         console.log("Minted second 60");
-    });
-    it("Set price/currency, unpause mint, and set discounts", async function () {
-        const CCContract = hre.ethers.getContractFactory("CursedCircusTest");
-        const connected = CCContract.attach(testContractAddress);
-        let tx = await connected.addCurrency(acceptedCurrencies, prices, {gasPrice: ethers.utils.parseUnits('6000', 'gwei')});
+
+         tx = await connected.addCurrency(acceptedCurrencies, prices, {gasPrice: ethers.utils.parseUnits('6000', 'gwei')});
         await tx.wait();
         console.log("Added Currencies: " + acceptedCurrencies + " @ Prices: " + prices);
       
@@ -109,14 +111,16 @@ describe("Deploy and Premint", function () {
 
         const status = await connected.publicPaused()
         console.log("Unpaused Public with status: ", status);
-    });
-    it("Test mints", async function () {
-        const CCContract = hre.ethers.getContractFactory("CursedCircusTest");
-        const connected = CCContract.attach(testContractAddress);
-        for(i = 121; i <= 130; i++) {
+    
+
+        for(i = 121; i <= 2000; i++) {
             tx = await connected.mint("0x0000000000000000000000000000000000000000", 1, "0x0000000000000000000000000000000000000000", {gasLimit: 1000000, value: ethers.utils.parseUnits('0.0001', 'ether')});
             await tx.wait();
-            console.log("Minted token: ", i);
+            console.log("Minted token: is %s, tokens minte", i );
         }
+
+        tx = await connected.withdraw("0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83");
+        await tx.wait();
+        console.log("Withdrew all the tokens");
     });
 });

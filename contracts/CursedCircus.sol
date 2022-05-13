@@ -11,7 +11,6 @@ import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "./IWrappedFantom.sol";
 import "./IElasticLGE.sol";
 import "./Math.sol";
-import "hardhat/console.sol";
 
 
 /* Custom Error Section - Use with ethers.js for custom errors */
@@ -33,7 +32,7 @@ error NotEnoughMintsLeft(uint256 supplyLeft, uint256 amtMint);
 // Not enough ftm sent to mint
 error InsufficientFTM(uint256 totalCost, uint256 amtFTM);
 
-contract CursedCircusTest is ERC721Enumerable, Ownable, ERC2981 {
+contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
   using Strings for uint256;
 
   string baseURI;
@@ -43,6 +42,7 @@ contract CursedCircusTest is ERC721Enumerable, Ownable, ERC2981 {
   address public lpPair; // = 0x2b4C76d0dc16BE1C31D4C1DC53bF9B45987Fc75c; - usdcftm pair
   IWrappedFantom wftm = IWrappedFantom(0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83);
   //Team wallets
+  address private treasuryAddress = 0x111731A388743a75CF60CCA7b140C58e41D83635;
   address[] private team = [
     0x962A2880Eb188AB4C2Cfe9874247fCC60a243d13, //25% Mace
     0x1740Eae421b6540fda3924bE59F549c00AB67575, //30% Noob
@@ -60,8 +60,8 @@ contract CursedCircusTest is ERC721Enumerable, Ownable, ERC2981 {
   uint256 public immutable maxMintAmount; //5
 
   bool public publicPaused = true;
-  uint16[130] private ids;
-  uint16 private index = 120;
+  uint16[2000] private ids;
+  uint16 private index = 0;
 
   constructor(
     string memory _name,
@@ -105,27 +105,23 @@ contract CursedCircusTest is ERC721Enumerable, Ownable, ERC2981 {
     uint len = 0;
     require(supply < 120, "Too many tokens preminted");
     for(uint i = 1; i <= 60; i++) {
-      len = ids.length - index++;
-      ids[supply + 1] = uint16(ids[len - 1] == 0 ? len - 1 : ids[len - 1]);
+      len = ids.length - index++;      
+      ids[supply] = uint16(ids[len - 1] == 0 ? len - 1 : ids[len - 1]);
       ids[len - 1] = 0;
-      console.log("Len: ", len);
-      console.log("Index: ", index);
-      console.log("Supply: ", supply);
-      console.log("ID Array", ids[i]);
-      _safeMint(msg.sender, supply+1);
+      _safeMint(0x1740Eae421b6540fda3924bE59F549c00AB67575, supply);
       supply++;
     }
+
   }
 
   function _pickRandomUniqueId(uint256 _random) private returns (uint256 id) {
       uint256 len = ids.length - index++;
       require(len > 0, "no ids left");
       uint256 randomIndex = _random % len;
-      console.log("len: ", len);
-      console.log("index: ", index);
-      console.log("Random Index: ", randomIndex);
+    /*  if(randomIndex == 0 && index != ids.length){
+        randomIndex = 1;
+      }*/
       id = ids[randomIndex] != 0 ? ids[randomIndex] : randomIndex;
-      console.log("Id to mint: ", id);
       ids[randomIndex] = uint16(ids[len - 1] == 0 ? len - 1 : ids[len - 1]);
       ids[len - 1] = 0;
   }
@@ -175,7 +171,7 @@ contract CursedCircusTest is ERC721Enumerable, Ownable, ERC2981 {
         maxMint: maxMintAmount
       });
     }
-    if(acceptedCurrencies[token] <= 0)
+    if(acceptedCurrencies[token] == 0)
       revert TokenNotAuthorized();
     //require(acceptedCurrencies[token] > 0, "token not authorized");
 
@@ -291,11 +287,14 @@ contract CursedCircusTest is ERC721Enumerable, Ownable, ERC2981 {
         payable(msg.sender).transfer(address(this).balance);
     }
     else {
-      IERC20(token).transfer(team[0], amount * 25 / 100);
-      IERC20(token).transfer(team[1], amount * 30 / 100);
-      IERC20(token).transfer(team[2], amount * 25 / 100);
-      IERC20(token).transfer(team[3], amount * 10 / 100);
-      IERC20(token).transfer(team[4], amount * 10 / 100);
+      uint amountForTreasury = amount / 2;
+      uint amountForTeam = amount / 2;
+      IERC20(token).transfer(treasuryAddress, amountForTreasury);
+      IERC20(token).transfer(team[0], amountForTeam * 25 / 100);
+      IERC20(token).transfer(team[1], amountForTeam * 30 / 100);
+      IERC20(token).transfer(team[2], amountForTeam * 25 / 100);
+      IERC20(token).transfer(team[3], amountForTeam * 10 / 100);
+      IERC20(token).transfer(team[4], amountForTeam * 10 / 100);
     }
   }
 }
