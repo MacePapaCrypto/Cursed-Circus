@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./ERC2981.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
-import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
+import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "./IWrappedFantom.sol";
 import "./IElasticLGE.sol";
 import "./Math.sol";
@@ -59,8 +59,8 @@ contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
   uint256 public immutable maxMintAmount; //5
 
   bool public publicPaused = true;
-  uint16[2000] private ids;
-  uint16 private index = 0;
+  uint16[200] private ids;
+  uint16 private index = 120;
 
   constructor(
     string memory _name,
@@ -98,6 +98,16 @@ contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
     return baseURI;
   }
 
+  //Likely need to call twice to mint all 120
+  function premintTokens() external onlyOwner {
+    uint supply = totalSupply();
+    require(supply < 120, "Too many tokens preminted");
+    for(uint i = 1; i <= 60; i++) {
+      _safeMint(msg.sender, supply+1);
+      supply++;
+    }
+  }
+
   function _pickRandomUniqueId(uint256 _random) private returns (uint256 id) {
       uint256 len = ids.length - index++;
       require(len > 0, "no ids left");
@@ -131,7 +141,7 @@ contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
     return Math.min(50, discount);
   } 
 
-  function mint(address token, uint amount, address collection) external payable {
+  function mint(address token, uint amount, address collection) external payable returns (uint) {
     //mint is closed
     if(publicPaused)
       revert MintPaused();
@@ -174,6 +184,7 @@ contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
         require(IERC20(token).transferFrom(msg.sender, address(this), amount * acceptedCurrencies[token] * (discountPercentage / 100)), "Payment not successful");
         _mintInternal(amount);
     }
+
   }
 
   function _mintInternal(uint _amount) internal {

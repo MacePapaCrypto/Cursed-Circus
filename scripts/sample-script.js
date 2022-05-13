@@ -4,6 +4,7 @@
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
 const { time } = require("console");
+const { mnemonicToEntropy } = require("ethers/lib/utils");
 const hre = require("hardhat");
 
 async function main() {
@@ -24,37 +25,81 @@ async function main() {
   ];
 
   const prices = [
-    ethers.utils.parseUnits('', 'ether'), //WFTM
-    ethers.utils.parseUnits('', 'ether')  //USDC
+    ethers.utils.parseUnits('0.0001', 'ether'), //WFTM
+    ethers.utils.parseUnits('0.0001', 'ether')  //USDC
+  ];
+
+  const collections = [
+    "0x25ff0d27395A7AAD578569f83E30C82a07b4ee7d", //Skully
+    "0x5ba5168a88b4f1c41fe71f59ddfa2305e0dbda8c", //PopPussies
+    "0xe92752C25111DB288665766aD8aDB624CCf91045", //Bitshadowz
+    "0xC369d0c7f27c51176dcb01802D6Bca2b3Eb0b8dC", //BitWitches
+    "0x5ed7893b8cf0f9199aa2760648779cb5d96716ae", //Mingoes
+    "0xa70aa1f9da387b815Facd5B823F284F15EC73884", //Frogs
+    "0x590e13984295df26c68f8c89f32fcf3a9f08177f", //PocketPals
+    "0x4f504ab2e7b196a4165ab3db71e75cb2b37070e0", //RiotGoool
+    "0x0ef9d39bbbed9c4983ddc4a1e189ee4938d837b3", //Hamsteria
+    "0x0ef9d39bbbed9c4983ddc4a1e189ee4938d837b3"  //CosmicHorrors
+  ];
+
+  const discounts = [
+    66,
+    66,
+    66,
+    66,
+    66,
+    66,
+    66,
+    66,
+    66,
+    50
   ];
 
   const PopContract = await hre.ethers.getContractFactory("CursedCircus");
-  //const connected = await PopContract.attach("0xF7d7169d41242f9F24759Bb55f0d7Ff4de5bc796");
+  const connected = await PopContract.attach("0x2223c245474D6a54cD47B9c314F60018215CFa96");
   //const ERC20Contract = await hre.ethers.getContractFactory("ERC20");
   //const erc20Connected = await ERC20Contract.attach("0xFb24bC6E1cE0e9f6ceb633FeF2127c2826d8820E");
   //await erc20Connected.approve("0x6C6BAFDf153Db9eC245f957Bc58794f03D65ac80", ethers.utils.parseUnits('1', 'ether'));*/
-  const connected = await PopContract.deploy(
+  /*const connected = await PopContract.deploy(
     "CursedCircus",
     "CC",
     "",
     "0x2b4C76d0dc16BE1C31D4C1DC53bF9B45987Fc75c",
     "0x1740Eae421b6540fda3924bE59F549c00AB67575",
     5,
-    2000,
+    200,
     5,
-    10,
-    {gasLimit: 8000000, gasPrice: ethers.utils.parseUnits('500', 'gwei')}
+    {gasLimit: 8000000, gasPrice: ethers.utils.parseUnits('6000', 'gwei')}
   );
   await connected.deployed();
   console.log("Deployed to: ", connected.address);
-  //console.log(ethers.utils.parseUnits('0.00001', 'ether'));
+  //console.log(ethers.utils.parseUnits('0.00001', 'ether'));*/
   try {
-    await connected.addCurrency(acceptedCurrencies, prices, {gasPrice: ethers.utils.parseUnits('2500', 'gwei')});
+    //tx = await connected.premintTokens({gasLimit: 8000000, gasPrice: ethers.utils.parseUnits('6000', 'gwei')});
+    //await tx.wait();
+    //console.log("Minted first 60");
+
+    tx = await connected.premintTokens({gasLimit: 8000000, gasPrice: ethers.utils.parseUnits('6000', 'gwei')});
+    await tx.wait();
+    console.log("Minted second 60");
+    
+    await connected.addCurrency(acceptedCurrencies, prices, {gasPrice: ethers.utils.parseUnits('6000', 'gwei')});
     console.log("Added Currencies");
   
-    /*const status = await connected.pausePublic(false, {gasPrice: ethers.utils.parseUnits('2500', 'gwei')});
+    const status = await connected.pausePublic(false, {gasPrice: ethers.utils.parseUnits('6000', 'gwei')});
     console.log("Unpaused Public");
-    await connected.mint(1, {gasLimit: 300000, value: ethers.utils.parseUnits('1', 'ether')});
+
+    tx = await connected.setDiscountCollections(collections, discounts, {gasPrice: ethers.utils.parseUnits('6000', 'gwei')});
+    await tx.wait();
+    console.log("Added collection discounts"); 
+
+    for(i = 121; i <= 200; i++) {
+      tx = await connected.mint("0x0000000000000000000000000000000000000000", 1, "0x0000000000000000000000000000000000000000", {gasLimit: 1000000, value: ethers.utils.parseUnits('0.0001', 'ether')});
+      await tx.wait();
+      console.log("Minted token: ", i);
+    }
+
+    /*await connected.mint(1, {gasLimit: 300000, value: ethers.utils.parseUnits('1', 'ether')});
     console.log("minted");
     await connected.withdraw("0x0000000000000000000000000000000000000000", {gasLimit: 300000});
     console.log("withdrawn");*/
