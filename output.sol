@@ -1675,7 +1675,7 @@ contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
 
   bool public publicPaused = true;
   uint16[130] private ids;
-  uint16 private index = 0;
+  uint16 private index = 120;
 
   constructor(
     string memory _name,
@@ -1716,12 +1716,12 @@ contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
   //Likely need to call twice to mint all 120
   function premintTokens() external onlyOwner {
     uint supply = totalSupply();
-    uint len = 0;
+    //uint len = 0;
     require(supply < 120, "Too many tokens preminted");
     for(uint i = 1; i <= 60; i++) {
-      len = ids.length - index++;
-      ids[supply + 1] = uint16(ids[len - 1] == 0 ? len - 1 : ids[len - 1]);
-      ids[len - 1] = 0;
+      //len = ids.length - index++;
+      //ids[supply + 1] = uint16(ids[len - 1] == 0 ? len - 1 : ids[len - 1]);
+      //ids[len - 1] = 0;
       _safeMint(msg.sender, supply+1);
       supply++;
     }

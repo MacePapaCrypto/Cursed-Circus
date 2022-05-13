@@ -11,6 +11,7 @@ import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "./IWrappedFantom.sol";
 import "./IElasticLGE.sol";
 import "./Math.sol";
+import "hardhat/console.sol";
 
 
 /* Custom Error Section - Use with ethers.js for custom errors */
@@ -32,7 +33,7 @@ error NotEnoughMintsLeft(uint256 supplyLeft, uint256 amtMint);
 // Not enough ftm sent to mint
 error InsufficientFTM(uint256 totalCost, uint256 amtFTM);
 
-contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
+contract CursedCircusTest is ERC721Enumerable, Ownable, ERC2981 {
   using Strings for uint256;
 
   string baseURI;
@@ -60,7 +61,7 @@ contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
 
   bool public publicPaused = true;
   uint16[130] private ids;
-  uint16 private index = 0;
+  uint16 private index = 120;
 
   constructor(
     string memory _name,
@@ -107,6 +108,10 @@ contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
       len = ids.length - index++;
       ids[supply + 1] = uint16(ids[len - 1] == 0 ? len - 1 : ids[len - 1]);
       ids[len - 1] = 0;
+      console.log("Len: ", len);
+      console.log("Index: ", index);
+      console.log("Supply: ", supply);
+      console.log("ID Array", ids[i]);
       _safeMint(msg.sender, supply+1);
       supply++;
     }
@@ -116,7 +121,11 @@ contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
       uint256 len = ids.length - index++;
       require(len > 0, "no ids left");
       uint256 randomIndex = _random % len;
+      console.log("len: ", len);
+      console.log("index: ", index);
+      console.log("Random Index: ", randomIndex);
       id = ids[randomIndex] != 0 ? ids[randomIndex] : randomIndex;
+      console.log("Id to mint: ", id);
       ids[randomIndex] = uint16(ids[len - 1] == 0 ? len - 1 : ids[len - 1]);
       ids[len - 1] = 0;
   }
