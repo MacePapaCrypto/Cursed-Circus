@@ -10,6 +10,7 @@ import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
 import "./IWrappedFantom.sol";
 import "./IElasticLGE.sol";
+import "./Math.sol";
 
 
 /* Custom Error Section - Use with ethers.js for custom errors */
@@ -126,7 +127,7 @@ contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
   }
 
   function _curve(uint term) internal returns (uint) {
-    uint discount = sqrt(term) / 400;
+    uint discount = Math.sqrt(term) / 400;
     return Math.min(50, discount);
   } 
 
