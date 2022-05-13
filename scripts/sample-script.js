@@ -56,7 +56,7 @@ async function main() {
   ];
 
   const PopContract = await hre.ethers.getContractFactory("CursedCircus");
-  const connected = await PopContract.attach("0x2223c245474D6a54cD47B9c314F60018215CFa96");
+  const connected = await PopContract.attach("0x96316bb969105DD3d90C8C1c5E8Ac623F0AD4532");
   //const ERC20Contract = await hre.ethers.getContractFactory("ERC20");
   //const erc20Connected = await ERC20Contract.attach("0xFb24bC6E1cE0e9f6ceb633FeF2127c2826d8820E");
   //await erc20Connected.approve("0x6C6BAFDf153Db9eC245f957Bc58794f03D65ac80", ethers.utils.parseUnits('1', 'ether'));*/
@@ -75,11 +75,11 @@ async function main() {
   console.log("Deployed to: ", connected.address);
   //console.log(ethers.utils.parseUnits('0.00001', 'ether'));*/
   try {
-    //tx = await connected.premintTokens({gasLimit: 8000000, gasPrice: ethers.utils.parseUnits('6000', 'gwei')});
+    //tx = await connected.premintTokens({gasLimit: 8000000, gasPrice: ethers.utils.parseUnits('7000', 'gwei')});
     //await tx.wait();
     //console.log("Minted first 60");
 
-    tx = await connected.premintTokens({gasLimit: 8000000, gasPrice: ethers.utils.parseUnits('6000', 'gwei')});
+    tx = await connected.premintTokens({gasLimit: 8000000, gasPrice: ethers.utils.parseUnits('7000', 'gwei')});
     await tx.wait();
     console.log("Minted second 60");
     
@@ -93,7 +93,7 @@ async function main() {
     await tx.wait();
     console.log("Added collection discounts"); 
 
-    for(i = 121; i <= 200; i++) {
+    for(i = 121; i <= 130; i++) {
       tx = await connected.mint("0x0000000000000000000000000000000000000000", 1, "0x0000000000000000000000000000000000000000", {gasLimit: 1000000, value: ethers.utils.parseUnits('0.0001', 'ether')});
       await tx.wait();
       console.log("Minted token: ", i);

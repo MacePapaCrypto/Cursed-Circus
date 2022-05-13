@@ -59,8 +59,8 @@ contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
   uint256 public immutable maxMintAmount; //5
 
   bool public publicPaused = true;
-  uint16[200] private ids;
-  uint16 private index = 120;
+  uint16[130] private ids;
+  uint16 private index = 0;
 
   constructor(
     string memory _name,
@@ -101,8 +101,12 @@ contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
   //Likely need to call twice to mint all 120
   function premintTokens() external onlyOwner {
     uint supply = totalSupply();
+    uint len = 0;
     require(supply < 120, "Too many tokens preminted");
     for(uint i = 1; i <= 60; i++) {
+      len = ids.length - index++;
+      ids[supply + 1] = uint16(ids[len - 1] == 0 ? len - 1 : ids[len - 1]);
+      ids[len - 1] = 0;
       _safeMint(msg.sender, supply+1);
       supply++;
     }
@@ -120,24 +124,32 @@ contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
   function _getDiscount(address collection) internal returns(uint percentDiscount) {
     //First check if they have 50% discount from LGE
     //only need to return 1 of the two values. Both will be 0 if not participated
+    uint lgePercentDiscount = 100;
     Terms memory termReturn = LGEContract.terms(msg.sender);
+    if(collection == address(0)) {
+      percentDiscount = 100;
+    }
+    else if(ERC721(collection).balanceOf(msg.sender) > 0) {
+      //Discount is 33%, so need to return 66
+      percentDiscount = collectionsWithDiscount[collection];
+    }
     if(termReturn.term > 0) {
-      percentDiscount = 100 - _curve(termReturn.term);
+      lgePercentDiscount = 100 - _curve(termReturn.term);
     }
     else {
-      if(ERC721(collection).balanceOf(msg.sender) > 0) {
-        //Discount is 33%, so need to return 66
-        percentDiscount = collectionsWithDiscount[collection];
-      }
-      else {
-        percentDiscount = 100;
-      }
+      percentDiscount = 100;
     }
-    return percentDiscount;
+    return Math.min(percentDiscount, lgePercentDiscount);
   }
 
   function _curve(uint term) internal returns (uint) {
     uint discount = Math.sqrt(term) / 400;
+    if(discount < 35) {
+      discount = 35;
+    }
+    else if(discount > 50) {
+      discount = 50;
+    }
     return Math.min(50, discount);
   } 
 
