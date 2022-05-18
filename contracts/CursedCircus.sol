@@ -142,7 +142,7 @@ contract CursedCircusTest is ERC721Enumerable, Ownable, ERC2981 {
       lgePercentDiscount = 100 - _curve(termReturn.term);
     }
     else {
-      percentDiscount = 100;
+      lgePercentDiscount = 100;
     }
     return Math.min(percentDiscount, lgePercentDiscount);
   }

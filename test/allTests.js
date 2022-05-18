@@ -15,8 +15,8 @@ describe("Deploy and Premint", function () {
     ];
 
     const prices = [
-        hre.ethers.utils.parseUnits('0.0001', 'ether'), //WFTM
-        hre.ethers.utils.parseUnits('0.0001', 'ether')  //USDC
+        hre.ethers.utils.parseUnits('120', 'ether'), //WFTM
+        hre.ethers.utils.parseUnits('420', 'ether')  //OATH
     ];
 
     const collections = [
@@ -24,7 +24,7 @@ describe("Deploy and Premint", function () {
         "0x5ba5168a88b4f1c41fe71f59ddfa2305e0dbda8c", //PopPussies
         "0xe92752C25111DB288665766aD8aDB624CCf91045", //Bitshadowz
         "0xC369d0c7f27c51176dcb01802D6Bca2b3Eb0b8dC", //BitWitches
-        "0x5ed7893b8cf0f9199aa2760648779cb5d96716ae", //Mingoes
+        "0xd761dB316b5b9C9C51F7f80127497Bc618e2B422", //Mingoes
         "0xa70aa1f9da387b815Facd5B823F284F15EC73884", //Frogs
         "0x590e13984295df26c68f8c89f32fcf3a9f08177f", //PocketPals
         "0x4f504ab2e7b196a4165ab3db71e75cb2b37070e0", //RiotGoool
@@ -58,8 +58,14 @@ describe("Deploy and Premint", function () {
           [owner, addr1, addr2, addr3, addr4, ...addrs] = await ethers.getSigners();
           await hre.network.provider.request({
             method: "hardhat_impersonateAccount",
-            params: ["0x962A2880Eb188AB4C2Cfe9874247fCC60a243d13"]}
-          );
+            params: ["0x962A2880Eb188AB4C2Cfe9874247fCC60a243d13"]
+          });
+          await hre.network.provider.request({
+            method: "hardhat_impersonateAccount",
+            params: ["0xF1a26c9f2978aB1CA4659d3FbD115845371ED0F5"]
+          });
+          nonLGEself = await ethers.provider.getSigner("0xF1a26c9f2978aB1CA4659d3FbD115845371ED0F5");
+          nonLGEselfAddress = await nonLGEself.getAddress();
           self = await ethers.provider.getSigner("0x962A2880Eb188AB4C2Cfe9874247fCC60a243d13");
           selfAddress = await self.getAddress();
           ownerAddress = await owner.getAddress();
@@ -88,6 +94,10 @@ describe("Deploy and Premint", function () {
         const connected = await CCContract.attach(testContractAddress);
         const OathContract = await hre.ethers.getContractFactory("ERC20");
         const connectedOath = await OathContract.attach("0x21Ada0D2aC28C3A5Fa3cD2eE30882dA8812279B6");
+        const MingoesContract = await hre.ethers.getContractFactory("PinkFlamingoSocialClub");
+        const connectedMingoes = await MingoesContract.attach("0xd761dB316b5b9C9C51F7f80127497Bc618e2B422");
+        const BitshadowzContract = await hre.ethers.getContractFactory("contracts/ERC721.sol:ERC721");
+        const connectedShadowz = await BitshadowzContract.attach("0xe92752C25111DB288665766aD8aDB624CCf91045");
         let tx = await connected.premintTokens({gasLimit: 8000000, gasPrice: ethers.utils.parseUnits('3000', 'gwei')});
         await tx.wait();
         let totalSupply = await connected.totalSupply();
@@ -114,14 +124,23 @@ describe("Deploy and Premint", function () {
         const status = await connected.publicPaused()
         console.log("Unpaused Public with status: ", status);
     
-        let userBalance = await ethers.provider.getBalance(selfAddress);
+        let userBalance = await ethers.provider.getBalance(nonLGEselfAddress);
         console.log("User Balance: ", await ethers.utils.formatEther(userBalance));
-        tx = await connected.connect(self).mint("0x0000000000000000000000000000000000000000", 2, "0xe92752C25111DB288665766aD8aDB624CCf91045", {gasLimit: 1000000, value: ethers.utils.parseUnits('0.000128', 'ether')});
+        let discountedValue =  2 * 120 * 66 / 100; //This is how it is calculated in solidity
+        let discoutnedValueString = discountedValue.toString();
+        console.log("Discounted Value: ", discountedValue);
+        expect(await connected.collectionsWithDiscount("0xd761dB316b5b9C9C51F7f80127497Bc618e2B422") > 0);
+        expect(await connectedMingoes.balanceOf(nonLGEselfAddress) > 0);
+        tx = await connected.connect(nonLGEself).mint("0x0000000000000000000000000000000000000000", 2, "0xd761dB316b5b9C9C51F7f80127497Bc618e2B422", {gasLimit: 1000000, value: ethers.utils.parseUnits(discoutnedValueString, 'ether')});
         await tx.wait();
         console.log(await connected.totalSupply());
         //console.log(tx);
-        userBalance = await ethers.provider.getBalance(selfAddress);
-        console.log("User Balance After Mint: ", await ethers.utils.formatEther(userBalance));
+        userBalance = await ethers.provider.getBalance(nonLGEselfAddress);
+        let expectedFtmBalance = userBalance - discountedValue;
+        let expectedFtmBalanceString = expectedFtmBalance.toString();
+        console.log("Expected Balance of FTM after Mint: ", expectedFtmBalance);
+        //expect(await userBalance).to.equal(expectedFtmBalanceString);
+        console.log("User Balance After Mint: ", ethers.utils.formatEther(userBalance));
         
         console.log("Minted with FTM");
 
@@ -133,20 +152,41 @@ describe("Deploy and Premint", function () {
 
         let oathBalance = await connectedOath.balanceOf(selfAddress);
         console.log("Oath Balance Before Mint: ", ethers.utils.formatEther(oathBalance));
+        discountedValue =  2 * 420 * 64 / 100; //This is how it is calculated in solidity
+        discoutnedValueString = discountedValue.toString();
+        console.log("Discounted Price: ", discountedValue);
+        expect(await connected.connect(self).collectionsWithDiscount("0xe92752C25111DB288665766aD8aDB624CCf91045") > 0);
+        expect(await connectedShadowz.balanceOf(selfAddress));
         tx = await connected.connect(self).mint("0x21Ada0D2aC28C3A5Fa3cD2eE30882dA8812279B6", 2, "0xe92752C25111DB288665766aD8aDB624CCf91045");
         await tx.wait();
         console.log(await connected.totalSupply());
         //console.log(tx);
         oathBalance = await connectedOath.balanceOf(selfAddress);
+        let expectedOathBalance = oathBalance - discountedValue;
+        console.log("Expected Oath Balance After Mint", expectedOathBalance);
         console.log("Oath Balance After Mint: ", ethers.utils.formatEther(oathBalance));
         console.log("Minted with Oath");
 
-        for(i = 125; i < 2000; i++) {
+        /*for(i = 125; i <= 1000; i++) {
             tx = await connected.mint("0x0000000000000000000000000000000000000000", 1, "0x0000000000000000000000000000000000000000", {gasLimit: 1000000, value: ethers.utils.parseUnits('0.0001', 'ether')});
             await tx.wait();
             //console.log("Minted token: is %s, tokens minted", i );
             console.log(await connected.totalSupply());
         }
+
+        for(i = 1001; i <= 1500; i++) {
+          tx = await connected.mint("0x0000000000000000000000000000000000000000", 1, "0x0000000000000000000000000000000000000000", {gasLimit: 1000000, value: ethers.utils.parseUnits('0.0001', 'ether')});
+          await tx.wait();
+          //console.log("Minted token: is %s, tokens minted", i );
+          console.log(await connected.totalSupply());
+        }
+
+        for(i = 1501; i <= 2000; i++) {
+          tx = await connected.mint("0x0000000000000000000000000000000000000000", 1, "0x0000000000000000000000000000000000000000", {gasLimit: 1000000, value: ethers.utils.parseUnits('0.0001', 'ether')});
+          await tx.wait();
+          //console.log("Minted token: is %s, tokens minted", i );
+          console.log(await connected.totalSupply());
+        }*/
 
         tx = await connected.withdraw("0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83");
         await tx.wait();
