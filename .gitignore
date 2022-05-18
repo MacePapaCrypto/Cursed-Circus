@@ -9,4 +9,3 @@ jsonOutput
 #Hardhat files
 cache
 artifacts
-hardhat.config.js
