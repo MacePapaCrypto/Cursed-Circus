@@ -32,7 +32,7 @@ error NotEnoughMintsLeft(uint256 supplyLeft, uint256 amtMint);
 // Not enough ftm sent to mint
 error InsufficientFTM(uint256 totalCost, uint256 amtFTM);
 
-contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
+contract CursedCircusTest is ERC721Enumerable, Ownable, ERC2981 {
   using Strings for uint256;
 
   string baseURI;
@@ -189,16 +189,16 @@ contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
 
     uint amountFromSender = msg.value;
     if (token == address(0)) {
-        if(amountFromSender != amount * acceptedCurrencies[address(wftm)] * (discountPercentage / 100))
+        if(amountFromSender != amount * acceptedCurrencies[address(wftm)] * discountPercentage / 100)
           revert InsufficientFTM({
-            totalCost: amount * acceptedCurrencies[address(wftm)] * (discountPercentage / 100),
+            totalCost: amount * acceptedCurrencies[address(wftm)] * discountPercentage / 100,
             amtFTM: amountFromSender
           });
         //require(msg.value == amount * acceptedCurrencies[address(wftm)], "insufficient ftm");
         wftm.deposit{ value: amountFromSender }();
         _mintInternal(amount);
     } else {
-        require(IERC20(token).transferFrom(msg.sender, address(this), amount * acceptedCurrencies[token] * (discountPercentage / 100)), "Payment not successful");
+        require(IERC20(token).transferFrom(msg.sender, address(this), amount * acceptedCurrencies[token] * discountPercentage / 100), "Payment not successful");
         _mintInternal(amount);
     }
 
@@ -263,10 +263,6 @@ contract CursedCircus is ERC721Enumerable, Ownable, ERC2981 {
 
   function setBaseURI(string memory _newBaseURI) public onlyOwner {
     baseURI = _newBaseURI;
-  }
-
-  function setBaseExtension(string memory _newBaseExtension) public onlyOwner {
-    baseExtension = _newBaseExtension;
   }
 
   function pausePublic(bool _state) public onlyOwner {

@@ -58,9 +58,9 @@ describe("Deploy and Premint", function () {
           [owner, addr1, addr2, addr3, addr4, ...addrs] = await ethers.getSigners();
           await hre.network.provider.request({
             method: "hardhat_impersonateAccount",
-            params: ["0x60BC5E0440C867eEb4CbcE84bB1123fad2b262B1"]}
+            params: ["0x962A2880Eb188AB4C2Cfe9874247fCC60a243d13"]}
           );
-          self = await ethers.provider.getSigner("0xF1a26c9f2978aB1CA4659d3FbD115845371ED0F5");
+          self = await ethers.provider.getSigner("0x962A2880Eb188AB4C2Cfe9874247fCC60a243d13");
           selfAddress = await self.getAddress();
           ownerAddress = await owner.getAddress();
 
@@ -86,6 +86,8 @@ describe("Deploy and Premint", function () {
     it("Premint should be completed", async function () {
         const CCContract = await hre.ethers.getContractFactory("CursedCircusTest");
         const connected = await CCContract.attach(testContractAddress);
+        const OathContract = await hre.ethers.getContractFactory("ERC20");
+        const connectedOath = await OathContract.attach("0x21Ada0D2aC28C3A5Fa3cD2eE30882dA8812279B6");
         let tx = await connected.premintTokens({gasLimit: 8000000, gasPrice: ethers.utils.parseUnits('3000', 'gwei')});
         await tx.wait();
         let totalSupply = await connected.totalSupply();
@@ -98,7 +100,7 @@ describe("Deploy and Premint", function () {
         expect(totalSupply).to.be.equal(120);
         console.log("Minted second 60");
 
-         tx = await connected.addCurrency(acceptedCurrencies, prices, {gasPrice: ethers.utils.parseUnits('6000', 'gwei')});
+        tx = await connected.addCurrency(acceptedCurrencies, prices, {gasPrice: ethers.utils.parseUnits('6000', 'gwei')});
         await tx.wait();
         console.log("Added Currencies: " + acceptedCurrencies + " @ Prices: " + prices);
       
@@ -112,11 +114,38 @@ describe("Deploy and Premint", function () {
         const status = await connected.publicPaused()
         console.log("Unpaused Public with status: ", status);
     
+        let userBalance = await ethers.provider.getBalance(selfAddress);
+        console.log("User Balance: ", await ethers.utils.formatEther(userBalance));
+        tx = await connected.connect(self).mint("0x0000000000000000000000000000000000000000", 2, "0xe92752C25111DB288665766aD8aDB624CCf91045", {gasLimit: 1000000, value: ethers.utils.parseUnits('0.000128', 'ether')});
+        await tx.wait();
+        console.log(await connected.totalSupply());
+        //console.log(tx);
+        userBalance = await ethers.provider.getBalance(selfAddress);
+        console.log("User Balance After Mint: ", await ethers.utils.formatEther(userBalance));
+        
+        console.log("Minted with FTM");
 
-        for(i = 121; i <= 2000; i++) {
+        const approvalTx = await connectedOath.connect(self).approve(testContractAddress, ethers.utils.parseUnits('1000', 'ether'));
+        approvalTx.wait();
+        //console.log(await connectedOath.allowance(selfAddress, testContractAddress));
+        expect(await connectedOath.allowance(selfAddress, testContractAddress)).to.equal(ethers.utils.parseUnits('1000', 'ether'));
+        console.log("Approved Oath to Mint");
+
+        let oathBalance = await connectedOath.balanceOf(selfAddress);
+        console.log("Oath Balance Before Mint: ", ethers.utils.formatEther(oathBalance));
+        tx = await connected.connect(self).mint("0x21Ada0D2aC28C3A5Fa3cD2eE30882dA8812279B6", 2, "0xe92752C25111DB288665766aD8aDB624CCf91045");
+        await tx.wait();
+        console.log(await connected.totalSupply());
+        //console.log(tx);
+        oathBalance = await connectedOath.balanceOf(selfAddress);
+        console.log("Oath Balance After Mint: ", ethers.utils.formatEther(oathBalance));
+        console.log("Minted with Oath");
+
+        for(i = 125; i < 2000; i++) {
             tx = await connected.mint("0x0000000000000000000000000000000000000000", 1, "0x0000000000000000000000000000000000000000", {gasLimit: 1000000, value: ethers.utils.parseUnits('0.0001', 'ether')});
             await tx.wait();
-            console.log("Minted token: is %s, tokens minte", i );
+            //console.log("Minted token: is %s, tokens minted", i );
+            console.log(await connected.totalSupply());
         }
 
         tx = await connected.withdraw("0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83");
