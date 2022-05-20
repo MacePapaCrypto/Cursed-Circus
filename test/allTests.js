@@ -1,7 +1,6 @@
 const { isCallTrace } = require("hardhat/internal/hardhat-network/stack-traces/message-trace");
 const hre = require('hardhat');
 const chai = require('chai');
-const { waffle } = require("hardhat");
 
 const {solidity} = require('ethereum-waffle');
 chai.use(solidity);
@@ -15,7 +14,7 @@ describe("Deploy and Premint", function () {
     ];
 
     const prices = [
-        hre.ethers.utils.parseUnits('120', 'ether'), //WFTM
+        hre.ethers.utils.parseUnits('1', 'ether'), //WFTM
         hre.ethers.utils.parseUnits('420', 'ether')  //OATH
     ];
 
@@ -70,6 +69,10 @@ describe("Deploy and Premint", function () {
           selfAddress = await self.getAddress();
           ownerAddress = await owner.getAddress();
 
+          const MockLGEContract = await hre.ethers.getContractFactory("MockLGE");
+          const connectedMock = await MockLGEContract.deploy();
+          await connectedMock.deployed();
+          const mockLGEAddress = connectedMock.address;
 
           const CCContract = await hre.ethers.getContractFactory("CursedCircusTest");
           const connected = await CCContract.deploy(
@@ -78,10 +81,12 @@ describe("Deploy and Premint", function () {
               "initbasuri",
               "0x2b4C76d0dc16BE1C31D4C1DC53bF9B45987Fc75c",
               "0x1740Eae421b6540fda3924bE59F549c00AB67575",
+              mockLGEAddress,
+              "0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83",
               5,
               2000,
               5,
-              {gasLimit: 8000000, gasPrice: ethers.utils.parseUnits('3000', 'gwei')}
+              {gasPrice: ethers.utils.parseUnits('3000', 'gwei')}
           );
           await connected.deployed();
           testContractAddress = connected.address;
@@ -89,7 +94,8 @@ describe("Deploy and Premint", function () {
 
 
     });
-    it("Premint should be completed", async function () {
+    describe("Deployment", function () {
+      it("Premint should be completed", async function () {
         const CCContract = await hre.ethers.getContractFactory("CursedCircusTest");
         const connected = await CCContract.attach(testContractAddress);
         const OathContract = await hre.ethers.getContractFactory("ERC20");
@@ -126,7 +132,7 @@ describe("Deploy and Premint", function () {
     
         let userBalance = await ethers.provider.getBalance(nonLGEselfAddress);
         console.log("User Balance: ", await ethers.utils.formatEther(userBalance));
-        let discountedValue =  2 * 120 * 66 / 100; //This is how it is calculated in solidity
+        let discountedValue =  2 * 1 * 66 / 100; //This is how it is calculated in solidity
         let discoutnedValueString = discountedValue.toString();
         console.log("Discounted Value: ", discountedValue);
         expect(await connected.collectionsWithDiscount("0xd761dB316b5b9C9C51F7f80127497Bc618e2B422") > 0);
@@ -167,29 +173,73 @@ describe("Deploy and Premint", function () {
         console.log("Oath Balance After Mint: ", ethers.utils.formatEther(oathBalance));
         console.log("Minted with Oath");
 
-        /*for(i = 125; i <= 1000; i++) {
-            tx = await connected.mint("0x0000000000000000000000000000000000000000", 1, "0x0000000000000000000000000000000000000000", {gasLimit: 1000000, value: ethers.utils.parseUnits('0.0001', 'ether')});
-            await tx.wait();
-            //console.log("Minted token: is %s, tokens minted", i );
-            console.log(await connected.totalSupply());
+        for(i = 125; i <= 1000; i++) {
+          tx = await connected.mint("0x0000000000000000000000000000000000000000", 1, "0x0000000000000000000000000000000000000000", {gasLimit: 1000000, value: ethers.utils.parseUnits('1', 'ether')});
+          await tx.wait();
+          //console.log("Minted token: is %s, tokens minted", i );
+          console.log(await connected.totalSupply());
         }
 
         for(i = 1001; i <= 1500; i++) {
-          tx = await connected.mint("0x0000000000000000000000000000000000000000", 1, "0x0000000000000000000000000000000000000000", {gasLimit: 1000000, value: ethers.utils.parseUnits('0.0001', 'ether')});
+          tx = await connected.mint("0x0000000000000000000000000000000000000000", 1, "0x0000000000000000000000000000000000000000", {gasLimit: 1000000, value: ethers.utils.parseUnits('1', 'ether')});
           await tx.wait();
           //console.log("Minted token: is %s, tokens minted", i );
           console.log(await connected.totalSupply());
         }
 
         for(i = 1501; i <= 2000; i++) {
-          tx = await connected.mint("0x0000000000000000000000000000000000000000", 1, "0x0000000000000000000000000000000000000000", {gasLimit: 1000000, value: ethers.utils.parseUnits('0.0001', 'ether')});
+          tx = await connected.mint("0x0000000000000000000000000000000000000000", 1, "0x0000000000000000000000000000000000000000", {gasLimit: 1000000, value: ethers.utils.parseUnits('1', 'ether')});
           await tx.wait();
           //console.log("Minted token: is %s, tokens minted", i );
           console.log(await connected.totalSupply());
-        }*/
+        }
 
         tx = await connected.withdraw("0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83");
         await tx.wait();
         console.log("Withdrew all the tokens");
-    });
+        });
+      });
+
+      describe("Test LGE Discounts", function () {
+        it("Test many terms", async function () {
+          const CCContract = await hre.ethers.getContractFactory("CursedCircusTest");
+          const connected = await CCContract.attach(testContractAddress);
+          const TestLGEContract = await hre.ethers.getContractAt("MockLGE");
+          const connectedMockLGE = await TestLGEContract.attach(mockLGEAddress);
+
+          termArray = [0, 86400, 864000, 1296000, 4320000, 8640000, 12960000, 21600000, 31536000, 126144000]
+
+          tx = await connected.addCurrency(acceptedCurrencies, prices, {gasPrice: ethers.utils.parseUnits('6000', 'gwei')});
+          await tx.wait();
+          console.log("Added Currencies: " + acceptedCurrencies + " @ Prices: " + prices);
+        
+          tx = await connected.setDiscountCollections(collections, discounts, {gasPrice: ethers.utils.parseUnits('6000', 'gwei')});
+          await tx.wait();
+          console.log("Added collections: " + collections + " @ Discounts: " + discounts); 
+
+          tx = await connected.pausePublic(false, {gasPrice: ethers.utils.parseUnits('6000', 'gwei')});
+          await tx.wait();
+
+          const status = await connected.publicPaused()
+          console.log("Unpaused Public with status: ", status);
+
+          for(i = 0; i < 10; i++) {
+            await connectedMockLGE.setTerms(termArray[i]);
+            let discountForMint = (35 + (sqrt(termArray[i])/800));
+            console.log(discountForMint);
+            if(discountForMint < 35) {
+              discountForMint = 35;
+            }
+            else if(discountForMint > 50) {
+              discountForMint = 50;
+            }
+            let costOfNFT = 1 * discountForMint;
+            let costOfNFTString = costOfNFT.toString();
+            tx = await connected.mint("0x0000000000000000000000000000000000000000", 1, "0x0000000000000000000000000000000000000000", {gasLimit: 1000000, value: ethers.utils.parseUnits(costOfNFTString, 'ether')});
+            await tx.wait();
+            tokenId = totalSupply();
+            console.log("Minted Token Id: %s at price %s", tokenId, costOfNFTString);
+          }
+        });
+      });
 });

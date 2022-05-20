@@ -10,6 +10,7 @@ import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "./IWrappedFantom.sol";
 import "./IElasticLGE.sol";
+import "./MockLGE.sol";
 import "./Math.sol";
 
 
@@ -32,15 +33,16 @@ error NotEnoughMintsLeft(uint256 supplyLeft, uint256 amtMint);
 // Not enough ftm sent to mint
 error InsufficientFTM(uint256 totalCost, uint256 amtFTM);
 
-contract CursedCircusTest is ERC721Enumerable, Ownable, ERC2981 {
+contract ClownTesterino is ERC721Enumerable, Ownable, ERC2981 {
   using Strings for uint256;
 
   string baseURI;
   string public baseExtension = ".json";
 
-  IElasticLGE LGEContract = IElasticLGE(0x96662f375a9734654cB57BbFeb31Db9dD7784A7F);
+  MockLGE testLGEContract;
+  IElasticLGE LGEContract;// = IElasticLGE(0x96662f375a9734654cB57BbFeb31Db9dD7784A7F);
   address public lpPair; // = 0x2b4C76d0dc16BE1C31D4C1DC53bF9B45987Fc75c; - usdcftm pair
-  IWrappedFantom wftm = IWrappedFantom(0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83);
+  IWrappedFantom wftm;// = IWrappedFantom(0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83);
   //Team wallets
   address private treasuryAddress = 0x111731A388743a75CF60CCA7b140C58e41D83635;
   address[] private team = [
@@ -69,13 +71,18 @@ contract CursedCircusTest is ERC721Enumerable, Ownable, ERC2981 {
     string memory _initBaseURI, //""
     address _lpPair,
     address _royaltyAddress,
+    address _addressLGE,
+    address _wftm,
     uint _royaltiesPercentage,
     uint _maxSupply,
     uint _maxMintAmount
   ) ERC721(_name, _symbol) {
         maxSupply = _maxSupply;
         maxMintAmount = _maxMintAmount;
-        lpPair = _lpPair; 
+        lpPair = _lpPair;
+        //testLGEContract = MockLGE(_addressLGE);
+        LGEContract = IElasticLGE(_addressLGE);
+        wftm = IWrappedFantom(_wftm);
         _setReceiver(_royaltyAddress);
         setBaseURI(_initBaseURI);
         _setRoyaltyPercentage(_royaltiesPercentage);
@@ -213,7 +220,7 @@ contract CursedCircusTest is ERC721Enumerable, Ownable, ERC2981 {
   function _getRandom() internal returns (uint) {
       (uint token0, uint token1) = _getRandomNumbers();
       return uint(keccak256(abi.encodePacked(
-          token0, token1
+          token0, token1, msg.sender, totalSupply()
       )));
   }
 

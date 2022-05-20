@@ -25,8 +25,8 @@ async function main() {
   ];
 
   const prices = [
-    ethers.utils.parseUnits('120', 'ether'), //WFTM
-    ethers.utils.parseUnits('420', 'ether')  //OATH
+    ethers.utils.parseUnits('0.0001', 'ether'), //WFTM
+    ethers.utils.parseUnits('0.0001', 'ether')  //OATH
   ];
 
   const collections = [
@@ -55,41 +55,43 @@ async function main() {
     50
   ];
 
-  const PopContract = await hre.ethers.getContractFactory("CursedCircus");
+  const CCContract = await hre.ethers.getContractFactory("ClownTesterino");
   //const connected = await PopContract.attach("0xe984EfF2D70452f52527171b39004503683D5bb7");
   //const ERC20Contract = await hre.ethers.getContractFactory("ERC20");
   //const erc20Connected = await ERC20Contract.attach("0xFb24bC6E1cE0e9f6ceb633FeF2127c2826d8820E");
   //await erc20Connected.approve("0x6C6BAFDf153Db9eC245f957Bc58794f03D65ac80", ethers.utils.parseUnits('1', 'ether'));*/
-  const connected = await PopContract.deploy(
-    "CursedCircus",
-    "CC",
-    "https://gateway.pinata.cloud/ipfs/QmdK7t4X4J1tMZ7r5upaAEZVd6B7XpnLDxjKNtn3N5x6wu/",
+  const connected = await CCContract.deploy(
+    "CCTEST",
+    "",
+    "initbasuri",
     "0x2b4C76d0dc16BE1C31D4C1DC53bF9B45987Fc75c",
     "0x1740Eae421b6540fda3924bE59F549c00AB67575",
+    "0x96662f375a9734654cB57BbFeb31Db9dD7784A7F",
+    "0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83",
     5,
     2000,
     5,
-    {gasLimit: 9750000, gasPrice: ethers.utils.parseUnits('2000', 'gwei')}
+    {gasPrice: ethers.utils.parseUnits('1000', 'gwei')}
   );
   await connected.deployed();
   console.log("Deployed to: ", connected.address);
   //console.log(ethers.utils.parseUnits('0.00001', 'ether'));*/
   try {
-    tx = await connected.premintTokens({gasLimit: 8000000, gasPrice: ethers.utils.parseUnits('2000', 'gwei')});
+    /*tx = await connected.premintTokens({gasLimit: 8000000, gasPrice: ethers.utils.parseUnits('1000', 'gwei')});
     await tx.wait();
     console.log("Minted first 60");
 
-    tx = await connected.premintTokens({gasLimit: 8000000, gasPrice: ethers.utils.parseUnits('2000', 'gwei')});
+    tx = await connected.premintTokens({gasLimit: 8000000, gasPrice: ethers.utils.parseUnits('1000', 'gwei')});
     await tx.wait();
-    console.log("Minted second 60");
+    console.log("Minted second 60");*/
     
-    tx = await connected.addCurrency(acceptedCurrencies, prices, {gasPrice: ethers.utils.parseUnits('2000', 'gwei')});
+    tx = await connected.addCurrency(acceptedCurrencies, prices, {gasPrice: ethers.utils.parseUnits('1000', 'gwei')});
     await tx.wait();
     console.log("Added Currencies");
   
-    /*const status = await connected.pausePublic(false, {gasPrice: ethers.utils.parseUnits('6000', 'gwei')});
+    const status = await connected.pausePublic(false, {gasPrice: ethers.utils.parseUnits('6000', 'gwei')});
     await status.wait();
-    console.log("Unpaused Public");*/
+    console.log("Unpaused Public");
 
     tx = await connected.setDiscountCollections(collections, discounts, {gasPrice: ethers.utils.parseUnits('2000', 'gwei')});
     await tx.wait();

@@ -21,19 +21,34 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
  * @type import('hardhat/config').HardhatUserConfig
  */
  module.exports = {
-  solidity: "0.8.13",
+  solidity: {
+    compilers: [
+      {
+        version: "0.8.13",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs:200
+          }
+        }
+      },
+    ]
+  },
+  mocha: {
+    timeout: 60000
+  },
   defaultNetwork: "ftmtest",
   networks: {
     hardhat: {},
     ftmmain: {
       url: "https://rpcapi-tracing.fantom.network",
       chainId: 250,
-      accounts: [PKEY]
+      accounts: [`0x${PKEY}`]
     },
     ftmtest: {
       url: "https://xapi.testnet.fantom.network/lachesis",
       chainId: 0xfa2,
-      accounts: [PKEY]
+      accounts: [`0x${PKEY}`]
     }
   },
   etherscan: {
